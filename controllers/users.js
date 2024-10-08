@@ -3,6 +3,7 @@ const router = express.Router();
 const bcrypt = require("bcryptjs");
 const User = require("../models/user");
 const jwt = require("jsonwebtoken");
+const verifyToken = require("../middleware/verify-token");
 
 const SALT_LENGTH = 12;
 
@@ -13,7 +14,9 @@ router.post("/signup", async (req, res) => {
       $or: [{ username: req.body.username }, { email: req.body.email }],
     });
     if (userInDatabase) {
-      return res.status(400).json({ error: "Username or email already taken." });
+      return res
+        .status(400)
+        .json({ error: "Username or email already taken." });
     }
 
     // Create a new user with hashed password
@@ -28,7 +31,7 @@ router.post("/signup", async (req, res) => {
   }
 });
 
-router.post('/signin', async (req, res) => {
+router.post("/signin", async (req, res) => {
   try {
     const user = await User.findOne({ username: req.body.username });
     if (user && bcrypt.compareSync(req.body.password, user.hashedPassword)) {
@@ -38,10 +41,46 @@ router.post('/signin', async (req, res) => {
       );
       res.status(200).json({ token });
     } else {
-      res.status(401).json({ error: 'Invalid username or password.' });
+      res.status(401).json({ error: "Invalid username or password." });
     }
   } catch (error) {
     res.status(400).json({ error: error.message });
+  }
+});
+
+// Get a user's profile
+router.get("/:userId", verifyToken, async (req, res) => {
+  try {
+    if (req.user._id !== req.params.userId) {
+      return res.status(401).json({ error: "Unauthorized" });
+    }
+
+    const user = await User.findById(req.params.userId);
+    if (!user) {
+      return res.status(404).json({ error: "Profile not found." });
+    }
+    res.json({ user });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Delete
+router.delete("/:userId", verifyToken, async (req, res) => {
+  try {
+    if (req.user._id !== req.params.userId) {
+      return res.status(401).json({ error: "Unauthorized" });
+    }
+
+    const user = await User.findById(req.params.userId);
+    if (!user) {
+      return res.status(404).json({ error: "User not found." });
+    }
+
+    await user.remove();
+    res.status(200).json({ message: "User account deleted successfully" });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
   }
 });
 
