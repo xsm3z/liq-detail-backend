@@ -67,18 +67,26 @@ router.delete("/:id", verifyToken, async (req, res) => {
     const vehicle = await Vehicle.findById(req.params.id);
     if (!vehicle) return res.status(404).json({ error: "Vehicle not found." });
 
+    const deletedBookings = await Booking.find({ vehicle: req.params.id });
+    const deletedBookingIds = deletedBookings.map((booking) => booking._id);
+
     await Booking.deleteMany({ vehicle: req.params.id });
 
-    await User.findByIdAndUpdate(vehicle.user, { $pull: { vehicles: vehicle._id } });
+    await User.findByIdAndUpdate(vehicle.user, {
+      $pull: { vehicles: vehicle._id },
+    });
+
+    await User.findByIdAndUpdate(vehicle.user, {
+      $pull: { bookings: { $in: deletedBookingIds } },
+    });
 
     await Vehicle.findByIdAndDelete(req.params.id);
 
-    res.status(200).json({ message: "Vehicle and associated bookings deleted successfully." });
+    res
+      .status(200).json({ message: "Vehicle and associated bookings deleted successfully." });
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
 });
-
-
 
 module.exports = router;

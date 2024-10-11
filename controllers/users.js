@@ -2,6 +2,8 @@ const express = require("express");
 const router = express.Router();
 const bcrypt = require("bcryptjs");
 const User = require("../models/user");
+const Vehicle = require("../models/vehicle");
+const Booking = require("../models/booking");
 const jwt = require("jsonwebtoken");
 const verifyToken = require("../middleware/verify-token");
 
@@ -69,13 +71,18 @@ router.delete("/:userId", verifyToken, async (req, res) => {
       return res.status(401).json({ error: "Unauthorized" });
     }
 
-    const user = await User.findByIdAndDelete(req.params.userId);
-    
+    const user = await User.findById(req.params.userId);
     if (!user) {
       return res.status(404).json({ error: "User not found." });
     }
 
-    res.status(200).json({ message: "User account deleted successfully" });
+    await Booking.deleteMany({ user: req.params.userId });
+
+    await Vehicle.deleteMany({ user: req.params.userId });
+
+    await User.findByIdAndDelete(req.params.userId);
+
+    res.status(200).json({ message: "User, associated bookings, and vehicles deleted successfully" });
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
