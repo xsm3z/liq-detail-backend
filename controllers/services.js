@@ -3,7 +3,6 @@ const router = express.Router();
 const Service = require("../models/service");
 const verifyToken = require("../middleware/verify-token");
 
-// Create
 router.post("/", verifyToken, async (req, res) => {
   try {
     const { name, description, price } = req.body;
@@ -21,7 +20,6 @@ router.post("/", verifyToken, async (req, res) => {
   }
 });
 
-// Get all ACTIVE services
 router.get("/", async (req, res) => {
   try {
     const services = await Service.find({ isActive: true });
@@ -31,7 +29,6 @@ router.get("/", async (req, res) => {
   }
 });
 
-// Update
 router.put("/:id", verifyToken, async (req, res) => {
   try {
     const service = await Service.findById(req.params.id);
@@ -50,7 +47,6 @@ router.put("/:id", verifyToken, async (req, res) => {
   }
 });
 
-// Disable
 router.put("/:id/disable", verifyToken, async (req, res) => {
   try {
     const service = await Service.findById(req.params.id);
@@ -58,7 +54,7 @@ router.put("/:id/disable", verifyToken, async (req, res) => {
       return res.status(404).json({ error: "Service not found" });
     }
 
-    service.isActive = false; // Mark the service as inactive
+    service.isActive = false;
     await service.save();
     res.status(200).json({ message: "Service disabled successfully." });
   } catch (error) {
@@ -66,7 +62,6 @@ router.put("/:id/disable", verifyToken, async (req, res) => {
   }
 });
 
-// Enable
 router.put("/:id/activate", verifyToken, async (req, res) => {
   try {
     const service = await Service.findById(req.params.id);
@@ -74,7 +69,7 @@ router.put("/:id/activate", verifyToken, async (req, res) => {
       return res.status(404).json({ error: "Service not found" });
     }
 
-    service.isActive = true; // Mark the service as active
+    service.isActive = true;
     await service.save();
     res.status(200).json({ message: "Service reactivated successfully." });
   } catch (error) {

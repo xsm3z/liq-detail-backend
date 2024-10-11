@@ -1,9 +1,10 @@
 const express = require("express");
 const router = express.Router();
 const Vehicle = require("../models/vehicle");
+const Booking = require("../models/booking");
+const User = require("../models/user");
 const verifyToken = require("../middleware/verify-token");
 
-// Create
 router.post("/", verifyToken, async (req, res) => {
   try {
     const { make, model, year } = req.body;
@@ -17,13 +18,15 @@ router.post("/", verifyToken, async (req, res) => {
     });
 
     await vehicle.save();
+
+    await User.findByIdAndUpdate(userId, { $push: { vehicles: vehicle._id } });
+
     res.status(201).json(vehicle);
   } catch (error) {
     res.status(400).json({ error: error.message });
   }
 });
 
-// Get all vehicles for the authenticated user
 router.get("/", verifyToken, async (req, res) => {
   try {
     const vehicles = await Vehicle.find({ user: req.user._id });
@@ -33,7 +36,6 @@ router.get("/", verifyToken, async (req, res) => {
   }
 });
 
-// Get a specific vehicle by ID
 router.get("/:id", verifyToken, async (req, res) => {
   try {
     const vehicle = await Vehicle.findById(req.params.id);
@@ -44,7 +46,6 @@ router.get("/:id", verifyToken, async (req, res) => {
   }
 });
 
-// Update
 router.put("/:id", verifyToken, async (req, res) => {
   try {
     const vehicle = await Vehicle.findById(req.params.id);
@@ -61,17 +62,23 @@ router.put("/:id", verifyToken, async (req, res) => {
   }
 });
 
-// Delete
 router.delete("/:id", verifyToken, async (req, res) => {
   try {
     const vehicle = await Vehicle.findById(req.params.id);
     if (!vehicle) return res.status(404).json({ error: "Vehicle not found." });
 
-    await vehicle.remove();
-    res.status(200).json({ message: "Vehicle deleted successfully." });
+    await Booking.deleteMany({ vehicle: req.params.id });
+
+    await User.findByIdAndUpdate(vehicle.user, { $pull: { vehicles: vehicle._id } });
+
+    await Vehicle.findByIdAndDelete(req.params.id);
+
+    res.status(200).json({ message: "Vehicle and associated bookings deleted successfully." });
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
 });
+
+
 
 module.exports = router;

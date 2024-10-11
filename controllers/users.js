@@ -9,7 +9,6 @@ const SALT_LENGTH = 12;
 
 router.post("/signup", async (req, res) => {
   try {
-    // Check if the username or email is already taken
     const userInDatabase = await User.findOne({
       $or: [{ username: req.body.username }, { email: req.body.email }],
     });
@@ -19,7 +18,6 @@ router.post("/signup", async (req, res) => {
         .json({ error: "Username or email already taken." });
     }
 
-    // Create a new user with hashed password
     const user = await User.create({
       username: req.body.username,
       email: req.body.email,
@@ -37,7 +35,8 @@ router.post("/signin", async (req, res) => {
     if (user && bcrypt.compareSync(req.body.password, user.hashedPassword)) {
       const token = jwt.sign(
         { username: user.username, _id: user._id },
-        process.env.JWT_SECRET
+        process.env.JWT_SECRET,
+        { expiresIn: "1h" }
       );
       res.status(200).json({ token });
     } else {
@@ -48,7 +47,6 @@ router.post("/signin", async (req, res) => {
   }
 });
 
-// Get a user's profile
 router.get("/:userId", verifyToken, async (req, res) => {
   try {
     if (req.user._id !== req.params.userId) {
@@ -65,19 +63,18 @@ router.get("/:userId", verifyToken, async (req, res) => {
   }
 });
 
-// Delete
 router.delete("/:userId", verifyToken, async (req, res) => {
   try {
     if (req.user._id !== req.params.userId) {
       return res.status(401).json({ error: "Unauthorized" });
     }
 
-    const user = await User.findById(req.params.userId);
+    const user = await User.findByIdAndDelete(req.params.userId);
+    
     if (!user) {
       return res.status(404).json({ error: "User not found." });
     }
 
-    await user.remove();
     res.status(200).json({ message: "User account deleted successfully" });
   } catch (error) {
     res.status(500).json({ error: error.message });
